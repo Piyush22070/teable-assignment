@@ -50,6 +50,7 @@ export enum HttpErrorCode {
   UNKNOWN_ERROR_CODE = 'unknown_error_code',
   /** view */
   VIEW_NOT_FOUND = 'view_not_found',
+  BAD_USER_INPUT = 'BAD_USER_INPUT',
 }
 
 export type ICustomHttpExceptionLocalization<T = string> = {

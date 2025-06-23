@@ -2,54 +2,36 @@ version: '3.9'
 
 services:
   teable:
-    image: ghcr.io/teableio/teable:latest
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - '3000:3000'
     volumes:
-      - teable-data:/app/.assets:rw
-      # you may use a bind-mounted host directory instead,
-      # so that it is harder to accidentally remove the volume and lose all your data!
-      # - ./docker/teable/data:/app/.assets:rw
-    env_file:
-      - .env
+      - .:/app:delegated        # Live sync your code
+      - /app/node_modules       # Don't overwrite container node_modules
+    command: pnpm dev           # Use your dev startup command
     environment:
+      - NODE_ENV=development
       - TZ=${TIMEZONE}
       - NEXT_ENV_IMAGES_ALL_REMOTE=true
-    networks:
-      - teable-standalone
     depends_on:
       teable-db:
         condition: service_healthy
+    networks:
+      - teable-standalone
 
   teable-db:
-    image: postgres:15.4
-    restart: always
     ports:
       - '42345:5432'
     volumes:
-      - teable-db:/var/lib/postgresql/data:rw
-      # you may use a bind-mounted host directory instead,
-      # so that it is harder to accidentally remove the volume and lose all your data!
-      # - ./docker/db/data:/var/lib/postgresql/data:rw
-    environment:
-      - TZ=${TIMEZONE}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    networks:
-      - teable-standalone
-    healthcheck:
-      test: ['CMD-SHELL', "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      - ./docker/db/data:/var/lib/postgresql/data:rw  # Use host directory for persistent DB
+
+volumes:
+  teable-data:
+  teable-db:
 
 networks:
   teable-standalone:
     name: teable-standalone-network
     driver: bridge
-
-volumes:
-  teable-data: {}
-  teable-db: {}

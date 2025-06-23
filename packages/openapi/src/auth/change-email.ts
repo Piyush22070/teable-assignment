@@ -5,10 +5,10 @@ import { z } from '../zod';
 
 export const CHANGE_EMAIL = '/auth/change-email';
 
+// Updated schema
 export const changeEmailRoSchema = z.object({
   email: z.string().email(),
-  token: z.string(),
-  code: z.string(),
+  password: z.string().min(1),
 });
 
 export type IChangeEmailRo = z.infer<typeof changeEmailRoSchema>;
@@ -16,7 +16,7 @@ export type IChangeEmailRo = z.infer<typeof changeEmailRoSchema>;
 export const changeEmailRoute: RouteConfig = registerRoute({
   method: 'patch',
   path: CHANGE_EMAIL,
-  description: 'Change email',
+  description: 'Change email without verification',
   request: {
     body: {
       content: {
@@ -28,7 +28,7 @@ export const changeEmailRoute: RouteConfig = registerRoute({
   },
   responses: {
     200: {
-      description: 'Change email successfully',
+      description: 'Email changed successfully',
     },
   },
   tags: ['auth'],
