@@ -276,30 +276,64 @@ export class LocalAuthService {
     // clear session
     await this.sessionStoreService.clearByUserId(userId);
   }
-
-  async changeEmail(email: string, token: string, code: string) {
+  // my changes
+  async changeEmail(email: string, password: string) {
+    const currentUser = this.cls.get('user');
     const currentEmail = this.cls.get('user.email');
-    const {
-      code: _code,
-      email: _currentEmail,
-      newEmail,
-    } = await this.jwtService
-      .verifyAsync<{ email: string; code: string; newEmail: string }>(token)
-      .catch(() => {
-        throw new CustomHttpException(
-          'Verification code is invalid',
-          HttpErrorCode.INVALID_CAPTCHA
-        );
-      });
-    if (newEmail !== email || _currentEmail !== currentEmail || _code !== code) {
-      throw new CustomHttpException('Verification code is invalid', HttpErrorCode.INVALID_CAPTCHA);
+
+    // 1. Check if new email is same as current
+    if (email === currentEmail) {
+      throw new CustomHttpException(
+        'New email must be different from current email',
+        HttpErrorCode.BAD_USER_INPUT
+      );
     }
-    const user = this.cls.get('user');
-    await this.prismaService.txClient().user.update({
-      where: { id: user.id, deletedTime: null, deactivatedTime: null },
-      data: { email: newEmail },
+
+    // 2. Check if email already exists
+    const existing = await this.prismaService.user.findUnique({
+      where: { email },
+      select: { id: true },
     });
-    // clear session
+
+    if (existing) {
+      throw new CustomHttpException('Email already in use', HttpErrorCode.CONFLICT);
+    }
+
+    // 3. Fetch user and check password
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        id: currentUser.id,
+        deletedTime: null,
+        deactivatedTime: null,
+      },
+      select: {
+        id: true,
+        password: true,
+      },
+    });
+
+    if (!user || !user.password) {
+      throw new CustomHttpException('User not found', HttpErrorCode.NOT_FOUND);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new CustomHttpException('Invalid password', HttpErrorCode.INVALID_CREDENTIALS);
+    }
+
+    // 4. Update email
+    await this.prismaService.txClient().user.update({
+      where: {
+        id: user.id,
+        deletedTime: null,
+        deactivatedTime: null,
+      },
+      data: {
+        email,
+      },
+    });
+
+    // 5.Clear all sessions
     await this.sessionStoreService.clearByUserId(user.id);
   }
 

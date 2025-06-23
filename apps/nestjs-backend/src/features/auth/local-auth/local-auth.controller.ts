@@ -115,7 +115,7 @@ export class LocalAuthController {
     @Res({ passthrough: true }) res: Response,
     @Req() req: Request
   ) {
-    await this.authService.changeEmail(body.email, body.token, body.code);
+    await this.authService.changeEmail(body.email, body.password);
     await this.sessionService.signout(req);
     res.clearCookie(AUTH_SESSION_COOKIE_NAME);
   }
